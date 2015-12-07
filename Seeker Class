@@ -1,0 +1,201 @@
+import java.util.ArrayList;
+import java.util.Scanner;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.io.*;
+import java.net.MalformedURLException;
+
+
+public class Seeker 
+{
+    /**
+     * @param ArrayOne
+     * @param ArrayTwo
+     *  Remove an invalid link from the array that will hold only valid searched links
+     */
+    public static void removeElement (ArrayList<String> ArrayOne, ArrayList<String> ArrayTwo)
+    {
+    	for(int i = 0; i < ArrayOne.size(); i++)
+    	{
+    		for (int j = 0; j < ArrayTwo.size(); j++)
+    		{
+    			if(ArrayTwo.get(j).contains(ArrayOne.get(i))){ArrayTwo.remove(j);}
+    		}
+    	}
+    }
+ 
+    /**
+     * @param url
+     * @return
+     * @throws java.net.MalformedURLException
+     * Checks whether the URL is absolute or not, as we only want to follow links within the ~martin domain.
+     */
+    public static boolean isAbsoluteURL(String url) throws java.net.MalformedURLException 
+    {
+		final URL baseHTTP = new URL("http://www.dcs.bbk.ac.uk");
+		final URL baseFILE = new URL("file:///");
+		URL frelative = new URL(baseFILE, url);
+		URL hrelative = new URL(baseHTTP, url);
+		return frelative.equals(hrelative);
+	}
+    
+    /**
+     * @param arrayOne
+     * Removes an invalid element from the array that will hold only valid searchable URL's
+     */
+    public static void cleaning(ArrayList<String> arrayOne)
+    {
+    	String hold = "";
+    	for (int z = 0; z < arrayOne.size(); z++)
+        {
+        	hold = arrayOne.get(z);
+        	for (int y = z+1; y < arrayOne.size(); y++)
+        	{
+        		if(hold.equals(arrayOne.get(y)))
+        		{
+        			arrayOne.remove(y);
+        			if(z > 0){z--;}
+        		}
+        	}
+        }					
+    }
+    
+    /**
+     * @param search
+     * @param obj
+     * @param arrayOne
+     * @param arrayTwo
+     * @param arrayThree
+     * @param url
+     * @param b
+     * @param two
+     * @throws MalformedURLException
+     * @throws FileNotFoundException
+     * Method that brings all together and crawls, needs the object, the two arrays, the url and an int that comes from the for loop
+     */
+    public static void Crawling (ParseHtmlLinks search,PrintWriter obj, ArrayList<String> arrayOne, ArrayList<String> arrayTwo, ArrayList<String> arrayThree, String url, int b, PrintWriter two) 
+    throws MalformedURLException, FileNotFoundException
+    {
+    	String nova = "";
+        boolean type = false;
+        nova = arrayOne.get(b);
+        url = "http://www.dcs.bbk.ac.uk/~martin/sewn/ls3" + "/" + nova;
+        search.setUrl(url);
+        System.out.println("Parsing links from: " + search.getUrl());
+        textFile(obj,url);
+        textFile(two,url);
+        search.parseHtmlLinks(obj);
+        arrayOne = search.getHtmlLinks();
+        arrayThree = search.getUntouchedLinks();
+        for (int i = 0; i < arrayOne.size(); i++)
+        {
+        	type = isAbsoluteURL(arrayOne.get(i));
+        	if (type == true)
+        	{
+        		arrayOne.remove(i);
+        		i--;
+        	}
+        }
+        removeElement(arrayTwo,arrayOne);
+        cleaning(arrayOne);
+        search.setHtmlLinks(arrayOne);
+        textFile(two,arrayThree,arrayOne);
+        search.getUntouchedLinks().clear();
+        
+    }
+   
+    /**
+     * @param from
+     * @param url
+     *  Writes text into a text file to make the file look clearer
+     */
+    public static void textFile (PrintWriter from, String url)
+    {
+    	from.println("");
+    	from.println("Visited: " + url);
+    	from.println("");
+    }
+ 
+    /**
+     * @param obj
+     * @param arrayA
+     * @param arrayB
+     * @throws FileNotFoundException
+     * Writes text into a the text file results.txt
+     */
+    public static void textFile(PrintWriter obj, ArrayList<String> arrayA, ArrayList<String> arrayB) throws FileNotFoundException
+    {
+    	int count = 0;
+    	String hold = "";
+    	for (int c = 0; c < arrayB.size(); c++)
+    	{
+    		hold = arrayB.get(c);
+    		for (int d = 0; d < arrayA.size(); d++)
+    		{
+    			if (hold.equals(arrayA.get(d))){count++;}
+    		}
+    	}
+    	obj.println("Number of Links to Visited pages: " + count);
+    }
+    /* */
+    /**
+     * @param url
+     * @param array
+     * @return
+     * @throws IOException
+     * Reads and copies into an array the disallowed paramaters for the domain to crawl, returns such an array.
+     */
+    public static ArrayList<String> readingRobots (String url,ArrayList<String> array) throws IOException
+    {
+    	URL oracle = new URL(url + "/robots.txt");
+        BufferedReader in = new BufferedReader(new InputStreamReader(oracle.openStream()));
+        String inputLine;
+        while ((inputLine = in.readLine()) != null)
+        {
+        	if(inputLine.contains("User-agent") || inputLine.contains("user-agent")){continue;}
+        	else
+        	{
+        		array.add(inputLine.substring(10,inputLine.length()-1));
+        	}
+        }
+        in.close();
+        return array;
+    }
+    // Main
+    public static void main(String args[]) throws IOException 
+    {
+    	Scanner in = new Scanner(System.in);
+    	System.out.println("Enter the URL you wish to Crawl: ");
+    	System.out.println();
+    	String url = in.nextLine();
+        ArrayList<String> notValid = new ArrayList<String>();
+        readingRobots(url,notValid);
+        ParseHtmlLinks search = new ParseHtmlLinks(url);
+        PrintWriter file = new PrintWriter ("crawl.txt", "UTF-8"); // Printwritter object
+        PrintWriter results = new PrintWriter ("results.txt", "UTF-8"); // Printwritter object
+        ArrayList<String> searched = new ArrayList<String>();
+       	ArrayList<String> all = new ArrayList<String>();
+        String nueva = ""; // String that will hold a new valid Url to Parse
+        notValid.add("../../"); // Adding this element will clean any valid URL that contains it and avoid the attempt of crawling malformed URL's
+        notValid.add("testpage.html"); // Correct format of testpage.html as it seems to be wrong in the robots.txt
+        
+        System.out.println("Parsing links from: " + search.getUrl());
+        textFile(file,url);
+        search.parseHtmlLinks(file);
+        searched = search.getHtmlLinks();
+        all = search.getUntouchedLinks();
+        removeElement(notValid,searched);
+        search.setHtmlLinks(searched);
+        
+        for (int b = 0; b < searched.size(); b++)
+        {
+        	Crawling(search,file,searched,notValid,all,nueva,b,results);
+        }
+        in.close(); // closing Scanner object
+        file.close(); // closing Printwriter
+        results.close(); // closing Printwriter
+        search.listHtmlLinks(); // Outputting the URL's on the console
+    }
+}
