@@ -1,0 +1,142 @@
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.EditorKit;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.html.HTML;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
+
+public class ParseHtmlLinks 
+{
+	private String url;
+	private ArrayList<String> htmlLinks;
+	private ArrayList<String> untouchedLinks;
+	
+	// Constructor
+	public ParseHtmlLinks(String url)
+	{
+		this.url = url;
+		this.htmlLinks = new ArrayList<String>();
+		this.untouchedLinks = new ArrayList<String>();
+	}
+	
+	// Getters and Setters
+	
+	public String getUrl() 
+	{
+        return url;
+    }
+
+    public void setUrl(String url)
+    {
+        this.url = url;
+    }
+
+    public ArrayList<String> getHtmlLinks() 
+    {
+        return htmlLinks;
+    }
+
+    public void setHtmlLinks(ArrayList<String> htmlLinks) 
+    {
+        this.htmlLinks = htmlLinks;
+    }
+    public ArrayList<String> getUntouchedLinks() 
+    {
+        return untouchedLinks;
+    }
+
+    public void setUntouchedLinks(ArrayList<String> untouched) 
+    {
+        this.untouchedLinks = untouched;
+    }
+	
+    // Methods
+    
+    /**
+     * @param htmlLink
+     * Adds a HTML link found in the Web page to collection htmlLinks.
+     */
+    public void addHtmlLink(String htmlLink) 
+    {
+        this.htmlLinks.add(htmlLink);
+        this.untouchedLinks.add(htmlLink);
+    }
+ 
+    /**
+     * Lists the links in the Web page.
+     */
+    public void listHtmlLinks() 
+    {
+        for (int i = 0; i < this.getHtmlLinks().size(); i++) 
+        {
+            System.out.println((i + 1) + ": " + this.getHtmlLinks().get(i));
+        }
+    }
+ 
+    /**
+     * @param obj
+     * @param url
+     * @throws FileNotFoundException
+     * Writes text into a text file
+     */
+    public static void textFile(PrintWriter obj, String url) throws FileNotFoundException
+    {
+    	obj.println("Link: " + url);
+	}
+    // 
+    /**
+     * @param obj
+     * Parses HTML links in the Web page. The Credit for this Method goes to Martin O'Shea, Lecturer at Birkbeck Universite as he wrote it.
+     * I just modify it a little for my code's benefit
+     */
+    public void parseHtmlLinks(PrintWriter obj) {
+        try {
+            URL url = new URI(this.getUrl()).toURL();
+            URLConnection conn = url.openConnection();
+            Reader rd = new InputStreamReader(conn.getInputStream());
+            EditorKit kit = new HTMLEditorKit();
+            HTMLDocument doc = (HTMLDocument) kit.createDefaultDocument();
+            doc.putProperty("IgnoreCharsetDirective", Boolean.TRUE);
+            kit.read(rd, doc, 0);
+            HTMLDocument.Iterator it = doc.getIterator(HTML.Tag.A);
+            while (it.isValid()) {
+                SimpleAttributeSet s = (SimpleAttributeSet) it.getAttributes();
+                String link = (String) s.getAttribute(HTML.Attribute.HREF);
+                if (link != null) {
+                    this.addHtmlLink(link);
+                    textFile(obj, link);
+                }
+                it.next();
+            }
+        }
+        catch(MalformedURLException e) {
+            System.out.println(e);
+            System.exit(1);
+        }
+        catch(URISyntaxException e) {
+            System.out.println(e);
+            System.exit(1);
+        }
+        catch(BadLocationException e) {
+            System.out.println(e);
+            System.exit(1);
+        }
+        catch(IOException e) {
+            System.out.println(e);
+            System.exit(1);
+        }
+    }
+
+}
